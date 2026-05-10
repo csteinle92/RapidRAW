@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, MouseEventHandler } from 'react';
 import { GLOBAL_KEYS } from './AppProperties';
 
 type SliderChangeEvent =
@@ -46,6 +46,7 @@ const Slider = ({
   const animationFrameRef = useRef<number | undefined>(undefined);
   const [isEditing, setIsEditing] = useState(false);
   const [inputValue, setInputValue] = useState<string>(String(value));
+  const [isMouseOver, setMouseOver] = useState<boolean>(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const rangeInputRef = useRef<HTMLInputElement | null>(null);
   const [isLabelHovered, setIsLabelHovered] = useState(false);
@@ -103,7 +104,9 @@ const Slider = ({
       }
 
       event.preventDefault();
-      const direction = -Math.sign(event.deltaY);
+      // macOS/Linux shift+scroll moves delta to deltaX,
+      // Windows keeps it in deltaY — handle both
+      const direction = -Math.sign(event.deltaY || event.deltaX);
       const newValue = value + direction * step * 2;
       const roundedNewValue = parseFloat(newValue.toFixed(decimalPlaces));
 
@@ -320,18 +323,12 @@ const Slider = ({
     const deltaX = touch.clientX - pendingTouch.startX;
     const deltaY = touch.clientY - pendingTouch.startY;
 
-    if (
-      Math.abs(deltaY) > TOUCH_DRAG_THRESHOLD_PX &&
-      Math.abs(deltaY) > Math.abs(deltaX)
-    ) {
+    if (Math.abs(deltaY) > TOUCH_DRAG_THRESHOLD_PX && Math.abs(deltaY) > Math.abs(deltaX)) {
       pendingTouchRef.current = null;
       return;
     }
 
-    if (
-      Math.abs(deltaX) < TOUCH_DRAG_THRESHOLD_PX ||
-      Math.abs(deltaX) < Math.abs(deltaY)
-    ) {
+    if (Math.abs(deltaX) < TOUCH_DRAG_THRESHOLD_PX || Math.abs(deltaX) < Math.abs(deltaY)) {
       return;
     }
 
@@ -396,20 +393,25 @@ const Slider = ({
     }
   };
 
-  const handleRangeKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.ctrlKey || e.metaKey) {
-      e.currentTarget.blur();
-      return;
-    }
-    if (GLOBAL_KEYS.includes(e.key)) {
-      e.currentTarget.blur();
-    }
-  };
+  // const handleRangeKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  //   if (e.ctrlKey || e.metaKey) {
+  //     e.currentTarget.blur();
+  //     return;
+  //   }
+  //   if (GLOBAL_KEYS.includes(e.key)) {
+  //     e.currentTarget.blur();
+  //   }
+  // };
 
   const numericValue = isNaN(Number(value)) ? 0 : Number(value);
 
   return (
-    <div className="mb-2 group" ref={containerRef}>
+    <div
+      className="mb-2 group"
+      ref={containerRef}
+      // onMouseEnter={() => setMouseOver(true)}
+      // onMouseLeave={() => setMouseOver(false)}
+    >
       <div className="flex justify-between items-center mb-1">
         <div
           className={`grid ${typeof label === 'string' ? 'cursor-pointer' : ''}`}
@@ -464,7 +466,6 @@ const Slider = ({
           )}
         </div>
       </div>
-
       <div className="relative w-full h-5">
         <div
           className={`absolute top-1/2 left-0 w-full h-1.5 -translate-y-1/4 rounded-full pointer-events-none ${
@@ -488,7 +489,7 @@ const Slider = ({
           min={String(min)}
           onChange={handleChange}
           onDoubleClick={handleReset}
-          onKeyDown={handleRangeKeyDown}
+          // onKeyDown={handleRangeKeyDown}
           onMouseDown={handleMouseDown}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
